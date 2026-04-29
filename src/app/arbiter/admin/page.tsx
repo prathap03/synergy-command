@@ -19,6 +19,28 @@ import BottomNav from '@/components/BottomNav'
 import { DEFAULT_SONGS } from '@/lib/defaultData'
 import { supabase } from '@/lib/supabase'
 
+function ConfirmButton({ label, confirmLabel, onConfirm, className }: {
+  label: string; confirmLabel: string; onConfirm: () => void; className?: string
+}) {
+  const [confirming, setConfirming] = useState(false)
+  if (confirming) return (
+    <div className="flex flex-col gap-2">
+      <p className="text-red-300 text-sm text-center font-semibold">Are you sure?</p>
+      <div className="flex gap-2">
+        <button onClick={() => { setConfirming(false); onConfirm() }}
+          className="flex-1 py-3 rounded-xl bg-red-600 text-white font-black min-h-[52px] active:scale-95">
+          {confirmLabel}
+        </button>
+        <button onClick={() => setConfirming(false)}
+          className="flex-1 py-3 rounded-xl bg-white/10 text-white/50 font-medium min-h-[52px]">
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+  return <button onClick={() => setConfirming(true)} className={className}>{label}</button>
+}
+
 const SEGMENTS = [
   'Phase I — Round 1: Nostalgia',
   'Phase I — Round 2: Kuthu',
@@ -38,7 +60,6 @@ export default function AdminPage() {
   const { state, markSegmentComplete, endEvent } = useEventState()
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1)
   const [activeLang, setActiveLang] = useState<'tamil' | 'hindi'>('tamil')
-  const [showEnd, setShowEnd] = useState(false)
   const { settings, updateSettings, resetSettings } = useSettings()
   const [tab, setTab] = useState<'setup' | 'songs' | 'timers' | 'danger'>('setup')
 
@@ -57,6 +78,32 @@ export default function AdminPage() {
   const handleEndEvent = async () => {
     await endEvent(completedSegments)
     router.push('/podium')
+  }
+
+  const handleFullReset = async () => {
+    // Clear Supabase
+    await resetScores()
+    await resetUsed()
+    await supabase.from('event_state').update({
+      current_phase: 0,
+      phase1_active_level: 1,
+      weighted_finish: false,
+      ended_at: null,
+      completed_segments: 0,
+      active_team_id: null,
+      ondeck_team_id: null,
+      timer_paused: true,
+      timer_remaining_ms: 3600000,
+    }).neq('id', '00000000-0000-0000-0000-000000000000')
+
+    // Clear all timer + stopwatch localStorage keys
+    const keysToRemove = Object.keys(localStorage).filter(k =>
+      k.startsWith('sc_timer_') || k.startsWith('sc_sw_')
+    )
+    keysToRemove.forEach(k => localStorage.removeItem(k))
+
+    // Reload to flush all component state
+    window.location.href = '/arbiter/home'
   }
 
   return (
@@ -201,32 +248,47 @@ export default function AdminPage() {
         {/* DANGER TAB */}
         {tab === 'danger' && (
           <div className="flex flex-col gap-3">
-            <button onClick={() => resetUsed()} className="danger-btn-secondary">
-              🔄 Reset Used Songs (re-pool all songs)
-            </button>
-            <button onClick={restoreDefaults} className="danger-btn-secondary">
-              📦 Restore Default Songs
-            </button>
-            <button onClick={() => { if (confirm('Reset ALL scores? This cannot be undone!')) resetScores() }} className="danger-btn-secondary">
-              🗑 Reset All Scores
-            </button>
+
+            {/* Full reset — most prominent */}
+            <div className="rounded-2xl bg-red-950/50 border-2 border-red-500/50 p-4 flex flex-col gap-3">
+              <div>
+                <p className="text-red-400 font-black text-lg">🔁 Full Reset</p>
+                <p className="text-white/40 text-xs mt-1">
+                  Clears all scores, all timers, all button states, resets used songs and event phase. Takes you back to the start screen.
+                </p>
+              </div>
+              <ConfirmButton
+                label="RESET EVERYTHING"
+                confirmLabel="Yes, reset everything!"
+                onConfirm={handleFullReset}
+                className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xl min-h-[60px] transition-colors"
+              />
+            </div>
+
+            <div className="border-t border-white/10 pt-3 flex flex-col gap-3">
+              <p className="text-white/30 text-xs uppercase tracking-wider">Individual resets</p>
+              <button onClick={() => resetUsed()} className="danger-btn-secondary">
+                🔄 Reset Used Songs only
+              </button>
+              <button onClick={restoreDefaults} className="danger-btn-secondary">
+                📦 Restore Default Songs
+              </button>
+              <button onClick={() => { if (confirm('Reset ALL scores? This cannot be undone!')) resetScores() }} className="danger-btn-secondary">
+                🗑 Reset Scores only
+              </button>
+            </div>
 
             <div className="mt-2 bg-red-950/40 rounded-2xl p-4 border border-red-500/30">
               <p className="text-red-400 font-bold mb-1">⚠️ End Event Early</p>
               <p className="text-white/40 text-xs mb-3">
                 {completedSegments}/7 segments completed. Scores will be weighted proportionally.
               </p>
-              {!showEnd ? (
-                <button onClick={() => setShowEnd(true)} className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xl min-h-[60px] transition-colors">
-                  🚨 END EVENT NOW
-                </button>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <p className="text-red-300 text-sm text-center font-semibold">Are you sure? This reveals the podium!</p>
-                  <button onClick={handleEndEvent} className="w-full py-3 rounded-xl bg-red-600 text-white font-black min-h-[52px]">Yes, End It!</button>
-                  <button onClick={() => setShowEnd(false)} className="w-full py-3 rounded-xl bg-white/10 text-white/50 font-medium min-h-[52px]">Cancel</button>
-                </div>
-              )}
+              <ConfirmButton
+                label="🚨 END EVENT NOW"
+                confirmLabel="Yes, reveal the podium!"
+                onConfirm={handleEndEvent}
+                className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xl min-h-[60px] transition-colors"
+              />
             </div>
           </div>
         )}
