@@ -3,7 +3,7 @@
 import { useTimer, formatTime } from '@/lib/useTimer'
 
 export default function GlobalTimer() {
-  const { remaining, running, start, pause, reset, pct } = useTimer(60 * 60)
+  const { remaining, running, start, pause, reset, pct } = useTimer(60 * 60, 'global')
   const color = pct > 0.25 ? (pct > 0.5 ? '#22c55e' : '#f59e0b') : '#ef4444'
 
   return (

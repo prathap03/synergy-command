@@ -14,8 +14,8 @@ import BottomNav from '@/components/BottomNav'
 import type { Team } from '@/lib/types'
 
 // ── Inline timer widget ──────────────────────────────────────────────────────
-function InlineTimer({ durationSec, label }: { durationSec: number; label: string }) {
-  const timer = useTimer(durationSec)
+function InlineTimer({ durationSec, label, storageKey }: { durationSec: number; label: string; storageKey: string }) {
+  const timer = useTimer(durationSec, storageKey)
   const pct = timer.pct
   const color = pct > 0.5 ? '#22c55e' : pct > 0.25 ? '#f59e0b' : '#ef4444'
 
@@ -67,8 +67,8 @@ function TimeBonusPanel({ teams, remaining, total, maxBonus, onScore }:
 }
 
 // ── Member stopwatch row (self-contained so hook isn't called in a loop) ──────
-function MemberStopwatchRow({ name, color, onDone }: { name: string; color: string; onDone: (ms: number) => void }) {
-  const sw = useStopwatch()
+function MemberStopwatchRow({ name, color, teamId, onDone }: { name: string; color: string; teamId: string; onDone: (ms: number) => void }) {
+  const sw = useStopwatch(`ball_${teamId}_${name}`)
   const [locked, setLocked] = useState(false)
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'fail'>('idle')
 
@@ -158,6 +158,7 @@ function BallPyramidTeamCard({ team, onScore }: { team: Team; onScore: (pts: num
             key={member}
             name={member}
             color={team.color}
+            teamId={team.id}
             onDone={(ms) => handleMemberDone(member, ms)}
           />
         ))}
@@ -183,11 +184,11 @@ function BallPyramidTeamCard({ team, onScore }: { team: Team; onScore: (pts: num
 
 function BallPyramid({ teams, durationSec, maxBonus, onScore }:
   { teams: Team[], durationSec: number, maxBonus: number, onScore: (id: string, pts: number, reason: string) => void }) {
-  const timer = useTimer(durationSec)
+  const timer = useTimer(durationSec, 'ball_pyramid')
 
   return (
     <div className="flex flex-col gap-4">
-      <InlineTimer durationSec={durationSec} label="Ball Pyramid" />
+      <InlineTimer durationSec={durationSec} label="Ball Pyramid" storageKey="ball_pyramid" />
 
       <p className="text-white/40 text-xs px-1">
         Tap ▶ when a member starts removing their cup. Tap ✅ if they succeed, ❌ if the ball drops. Score is awarded after all members finish.
@@ -212,8 +213,12 @@ function CupDribble({ teams, durationSec, onScore }:
   const [times, setTimes] = useState<Record<string, number>>({})
   const [ranked, setRanked] = useState(false)
 
-  // Per-team stopwatches
-  const stopwatches = teams.map(() => useStopwatch())
+  // Per-team stopwatches — keyed by team index (stable across renders)
+  const sw0 = useStopwatch(teams[0] ? `dribble_${teams[0].id}` : undefined)
+  const sw1 = useStopwatch(teams[1] ? `dribble_${teams[1].id}` : undefined)
+  const sw2 = useStopwatch(teams[2] ? `dribble_${teams[2].id}` : undefined)
+  const sw3 = useStopwatch(teams[3] ? `dribble_${teams[3].id}` : undefined)
+  const stopwatches = [sw0, sw1, sw2, sw3]
 
   const calcRankings = () => {
     const recorded = Object.entries(times).filter(([, t]) => t > 0)
@@ -226,7 +231,7 @@ function CupDribble({ teams, durationSec, onScore }:
 
   return (
     <div className="flex flex-col gap-4">
-      <InlineTimer durationSec={durationSec} label="Cup Dribble" />
+      <InlineTimer durationSec={durationSec} label="Cup Dribble" storageKey="cup_dribble" />
 
       <div className="flex flex-col gap-2">
         <p className="text-white/50 text-xs">Each member fans a cup to the line and back. Record each team's total relay time.</p>
@@ -265,11 +270,11 @@ function CupDribble({ teams, durationSec, onScore }:
 // ── Cone in Hole ──────────────────────────────────────────────────────────────
 function ConeInHole({ teams, durationSec, maxBonus, onScore }:
   { teams: Team[], durationSec: number, maxBonus: number, onScore: (id: string, pts: number, reason: string) => void }) {
-  const timer = useTimer(durationSec)
+  const timer = useTimer(durationSec, 'cone_hole')
 
   return (
     <div className="flex flex-col gap-4">
-      <InlineTimer durationSec={durationSec} label="Cone in Hole" />
+      <InlineTimer durationSec={durationSec} label="Cone in Hole" storageKey="cone_hole" />
 
       {/* Scoring key */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -315,7 +320,7 @@ function ConeInHole({ teams, durationSec, maxBonus, onScore }:
 // ── Cup Straw ─────────────────────────────────────────────────────────────────
 function CupStraw({ teams, durationSec, onScore }:
   { teams: Team[], durationSec: number, onScore: (id: string, pts: number, reason: string) => void }) {
-  const timer = useTimer(durationSec)
+  const timer = useTimer(durationSec, 'cup_straw')
   const [counts, setCounts] = useState<Record<string, string>>({})
   const [awarded, setAwarded] = useState(false)
   const color = timer.pct > 0.5 ? '#22c55e' : timer.pct > 0.25 ? '#f59e0b' : '#ef4444'

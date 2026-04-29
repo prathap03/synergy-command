@@ -37,6 +37,7 @@ export default function AdminPage() {
   const { songs, addSong, updateSong, deleteSong, resetUsed } = useSongs()
   const { state, markSegmentComplete, endEvent } = useEventState()
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1)
+  const [activeLang, setActiveLang] = useState<'tamil' | 'hindi'>('tamil')
   const [showEnd, setShowEnd] = useState(false)
   const { settings, updateSettings, resetSettings } = useSettings()
   const [tab, setTab] = useState<'setup' | 'songs' | 'timers' | 'danger'>('setup')
@@ -166,12 +167,34 @@ export default function AdminPage() {
         {/* SONGS TAB */}
         {tab === 'songs' && (
           <>
+            {/* Language pills */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveLang('tamil')}
+                className={`flex-1 py-3 rounded-2xl font-bold text-sm border-2 transition-all min-h-[48px] ${
+                  activeLang === 'tamil' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                🎵 Tamil
+                <span className="ml-1 text-xs opacity-70">({songs.filter(s => s.language === 'tamil').length})</span>
+              </button>
+              <button
+                onClick={() => setActiveLang('hindi')}
+                className={`flex-1 py-3 rounded-2xl font-bold text-sm border-2 transition-all min-h-[48px] ${
+                  activeLang === 'hindi' ? 'bg-orange-600 border-orange-500 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                🎬 Hindi
+                <span className="ml-1 text-xs opacity-70">({songs.filter(s => s.language === 'hindi').length})</span>
+              </button>
+            </div>
             <LevelTabs active={activeLevel} onChange={setActiveLevel} />
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
               <p className="text-white/50 text-xs mb-3 font-medium">Add New Song</p>
               <SongForm onSave={(s) => addSong(s as any)} />
             </div>
-            <SongList songs={songs} level={activeLevel} onDelete={deleteSong} onUpdate={updateSong} />
+            <SongList
+              songs={songs.filter(s => s.language === activeLang)}
+              level={activeLevel}
+              onDelete={deleteSong}
+              onUpdate={updateSong}
+            />
           </>
         )}
 

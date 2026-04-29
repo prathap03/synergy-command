@@ -27,7 +27,7 @@ export default function Phase1Page() {
   const { songs, markUsed, getUnusedByLevel } = useSongs()
   const { state, setLevel } = useEventState()
   const { settings } = useSettings()
-  const timer = useTimer(settings.phase1_secs)
+  const timer = useTimer(settings.phase1_secs, 'phase1')
   const [level, setLocalLevel] = useState<1 | 2 | 3>(1)
   const [language, setLanguage] = useState<SongLanguage>('tamil')
   const [picked, setPicked] = useState<Song | null>(null)

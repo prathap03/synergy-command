@@ -54,7 +54,7 @@ export default function Phase3Page() {
             <h1 className="text-lg font-black text-white">🧠 Shout the Thought</h1>
             <p className="text-white/40 text-xs">Round {round} of 3</p>
           </div>
-          <PhaseTimer durationSec={PHASE_TIMERS.phase3} label="Phase III" />
+          <PhaseTimer durationSec={PHASE_TIMERS.phase3} storageKey="phase3" label="Phase III" />
         </div>
         <div className="flex gap-2 mt-2">
           {[1, 2, 3].map((r) => (
