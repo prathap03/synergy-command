@@ -11,6 +11,7 @@ import { useSongs } from '@/lib/useSongs'
 import { useEventState } from '@/lib/useEventState'
 import { useSettings } from '@/lib/useSettings'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
+import TeamEditor from '@/components/TeamEditor'
 import SongForm from '@/components/SongForm'
 import SongList from '@/components/SongList'
 import LevelTabs from '@/components/LevelTabs'
@@ -36,8 +37,6 @@ export default function AdminPage() {
   const { songs, addSong, updateSong, deleteSong, resetUsed } = useSongs()
   const { state, markSegmentComplete, endEvent } = useEventState()
   const [activeLevel, setActiveLevel] = useState<1 | 2 | 3>(1)
-  const [editingTeam, setEditingTeam] = useState<string | null>(null)
-  const [teamName, setTeamName] = useState('')
   const [showEnd, setShowEnd] = useState(false)
   const { settings, updateSettings, resetSettings } = useSettings()
   const [tab, setTab] = useState<'setup' | 'songs' | 'timers' | 'danger'>('setup')
@@ -85,32 +84,10 @@ export default function AdminPage() {
             <QRCodeDisplay />
 
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-              <p className="text-white/50 text-xs uppercase tracking-wider font-medium mb-3">Team Names</p>
-              <div className="flex flex-col gap-2">
+              <p className="text-white/50 text-xs uppercase tracking-wider font-medium mb-3">Teams</p>
+              <div className="flex flex-col gap-3">
                 {teams.map((t) => (
-                  <div key={t.id} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
-                    {editingTeam === t.id ? (
-                      <>
-                        <input
-                          value={teamName}
-                          onChange={(e) => setTeamName(e.target.value)}
-                          className="input-field flex-1 py-2"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { updateTeam(t.id, { name: teamName }); setEditingTeam(null) }
-                            if (e.key === 'Escape') setEditingTeam(null)
-                          }}
-                        />
-                        <button onClick={() => { updateTeam(t.id, { name: teamName }); setEditingTeam(null) }} className="btn-primary px-3 py-2 text-sm min-h-[40px]">✓</button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-white flex-1 font-medium">{t.name}</span>
-                        <button onClick={() => { setEditingTeam(t.id); setTeamName(t.name) }} className="btn-ghost px-3 py-2 text-sm min-h-[40px]">✏️</button>
-                      </>
-                    )}
-                  </div>
+                  <TeamEditor key={t.id} team={t} onUpdate={updateTeam} />
                 ))}
               </div>
             </div>

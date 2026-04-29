@@ -66,37 +66,140 @@ function TimeBonusPanel({ teams, remaining, total, maxBonus, onScore }:
   )
 }
 
+// ── Member stopwatch row (self-contained so hook isn't called in a loop) ──────
+function MemberStopwatchRow({ name, color, onDone }: { name: string; color: string; onDone: (ms: number) => void }) {
+  const sw = useStopwatch()
+  const [locked, setLocked] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'fail'>('idle')
+
+  const handleStop = (result: 'done' | 'fail') => {
+    sw.stop()
+    setLocked(true)
+    setStatus(result)
+    onDone(result === 'done' ? sw.elapsed : -1)
+  }
+
+  const reset = () => { sw.reset(); setLocked(false); setStatus('idle') }
+
+  const statusColor = status === 'done' ? '#22c55e' : status === 'fail' ? '#ef4444' : color
+
+  return (
+    <div className="flex items-center gap-2 py-2 border-b border-white/5 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-semibold text-sm truncate">{name}</p>
+        <p className="font-mono text-base font-bold tabular-nums" style={{ color: statusColor }}>
+          {sw.formatted}
+          {status === 'done' && <span className="text-green-400 text-xs ml-2">✅ cleared</span>}
+          {status === 'fail' && <span className="text-red-400 text-xs ml-2">❌ dropped</span>}
+        </p>
+      </div>
+      <div className="flex gap-1.5 flex-shrink-0">
+        {status === 'idle' && !sw.running && (
+          <button onClick={sw.start}
+            className="min-w-[44px] min-h-[44px] rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold active:scale-90 transition-all">
+            ▶
+          </button>
+        )}
+        {sw.running && (
+          <>
+            <button onClick={() => handleStop('done')}
+              className="min-h-[44px] px-3 rounded-xl bg-green-500/20 border border-green-500/40 text-green-400 font-bold text-sm active:scale-90 transition-all">
+              ✅
+            </button>
+            <button onClick={() => handleStop('fail')}
+              className="min-h-[44px] px-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 font-bold text-sm active:scale-90 transition-all">
+              ❌
+            </button>
+          </>
+        )}
+        {locked && (
+          <button onClick={reset}
+            className="min-w-[44px] min-h-[44px] rounded-xl bg-white/10 text-white/40 font-bold active:scale-90 transition-all">
+            ↺
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Ball Pyramid ──────────────────────────────────────────────────────────────
+function BallPyramidTeamCard({ team, onScore }: { team: Team; onScore: (pts: number, reason: string) => void }) {
+  const [results, setResults] = useState<Record<string, number>>({})
+  const [scored, setScored] = useState(false)
+
+  const succeeded = Object.values(results).filter(ms => ms >= 0).length
+  const total = team.members.length
+
+  const handleMemberDone = (name: string, ms: number) => {
+    setResults(prev => ({ ...prev, [name]: ms }))
+  }
+
+  const awardScore = () => {
+    const pts = succeeded * 10
+    onScore(pts, `Ball Pyramid — ${succeeded}/${total} members cleared`)
+    setScored(true)
+  }
+
+  return (
+    <div className="rounded-2xl border p-4 flex flex-col gap-2"
+      style={{ borderColor: team.color + '50', backgroundColor: team.color + '0d' }}>
+      <div className="flex items-center justify-between">
+        <span className="font-bold text-white">{team.name}</span>
+        <span className="text-xs font-semibold px-2 py-1 rounded-full"
+          style={{ backgroundColor: team.color + '33', color: team.color }}>
+          {succeeded}/{total} cleared
+        </span>
+      </div>
+
+      <div className="flex flex-col">
+        {team.members.map((member) => (
+          <MemberStopwatchRow
+            key={member}
+            name={member}
+            color={team.color}
+            onDone={(ms) => handleMemberDone(member, ms)}
+          />
+        ))}
+      </div>
+
+      {!scored ? (
+        <button
+          onClick={awardScore}
+          disabled={Object.keys(results).length === 0}
+          className="mt-1 w-full min-h-[48px] rounded-xl font-black text-base active:scale-95 transition-all disabled:opacity-30"
+          style={{ backgroundColor: team.color + '33', border: `1px solid ${team.color}60`, color: '#fff' }}
+        >
+          Award +{succeeded * 10} pts ({succeeded} × 10)
+        </button>
+      ) : (
+        <div className="mt-1 w-full py-2 rounded-xl bg-green-500/10 text-green-400 font-bold text-sm text-center">
+          ✅ +{succeeded * 10} pts awarded
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BallPyramid({ teams, durationSec, maxBonus, onScore }:
   { teams: Team[], durationSec: number, maxBonus: number, onScore: (id: string, pts: number, reason: string) => void }) {
   const timer = useTimer(durationSec)
-  const color = timer.pct > 0.5 ? '#22c55e' : timer.pct > 0.25 ? '#f59e0b' : '#ef4444'
 
   return (
     <div className="flex flex-col gap-4">
       <InlineTimer durationSec={durationSec} label="Ball Pyramid" />
 
-      <div className="flex flex-col gap-2">
-        <p className="text-white/50 text-xs">Each of 5 members removes one cup. Score = how many succeeded.</p>
-        <div className="grid grid-cols-5 gap-1 text-white/30 text-[10px] text-center pb-0.5">
-          {[1,2,3,4,5].map(n => <span key={n}>{n} member{n>1?'s':''}</span>)}
-        </div>
-        {teams.map((t) => (
-          <div key={t.id} className="rounded-xl border p-3 flex flex-col gap-2"
-            style={{ borderColor: t.color + '40', backgroundColor: t.color + '0d' }}>
-            <span className="font-semibold text-white text-sm">{t.name}</span>
-            <div className="flex gap-1.5">
-              {[10, 20, 30, 40, 50].map((pts) => (
-                <button key={pts} onClick={() => onScore(t.id, pts, `Ball Pyramid — ${pts/10} member${pts>10?'s':''}`)}
-                  className="flex-1 min-h-[48px] rounded-xl font-bold text-white text-sm active:scale-90 transition-all"
-                  style={{ backgroundColor: t.color + '33', border: `1px solid ${t.color}60` }}>
-                  +{pts}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <p className="text-white/40 text-xs px-1">
+        Tap ▶ when a member starts removing their cup. Tap ✅ if they succeed, ❌ if the ball drops. Score is awarded after all members finish.
+      </p>
+
+      {teams.map((t) => (
+        <BallPyramidTeamCard
+          key={t.id}
+          team={t}
+          onScore={(pts, reason) => onScore(t.id, pts, reason)}
+        />
+      ))}
 
       <TimeBonusPanel teams={teams} remaining={timer.remaining} total={durationSec} maxBonus={maxBonus} onScore={onScore} />
     </div>
