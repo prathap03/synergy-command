@@ -46,11 +46,11 @@ export function useSongs() {
     await supabase.from('songs').update({ used: false }).neq('id', '00000000-0000-0000-0000-000000000000')
   }, [])
 
-  const getByLevel = useCallback((level: 1 | 2 | 3) =>
-    songs.filter((s) => s.level === level), [songs])
+  const getByLevel = useCallback((level: 1 | 2 | 3, language: 'tamil' | 'hindi' = 'tamil') =>
+    songs.filter((s) => s.level === level && s.language === language), [songs])
 
-  const getUnusedByLevel = useCallback((level: 1 | 2 | 3) =>
-    songs.filter((s) => s.level === level && !s.used), [songs])
+  const getUnusedByLevel = useCallback((level: 1 | 2 | 3, language: 'tamil' | 'hindi' = 'tamil') =>
+    songs.filter((s) => s.level === level && s.language === language && !s.used), [songs])
 
   return { songs, loading, addSong, updateSong, deleteSong, markUsed, resetUsed, getByLevel, getUnusedByLevel }
 }

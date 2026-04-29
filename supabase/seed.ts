@@ -1,6 +1,9 @@
 /**
- * Run once to seed initial teams, songs, and event_state:
+ * Reseed: clears and repopulates all tables.
  *   npx tsx supabase/seed.ts
+ *
+ * Run migration first if adding language column:
+ *   ALTER TABLE songs ADD COLUMN IF NOT EXISTS language text NOT NULL DEFAULT 'tamil';
  */
 import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_TEAMS, DEFAULT_SONGS } from '../src/lib/defaultData'
@@ -11,21 +14,33 @@ const supabase = createClient(
 )
 
 async function seed() {
+  console.log('🧹 Clearing existing data...')
+
+  const { error: delScores } = await supabase.from('scores').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  if (delScores) console.warn('  scores:', delScores.message)
+
+  const { error: delState } = await supabase.from('event_state').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  if (delState) console.warn('  event_state:', delState.message)
+
+  const { error: delSongs } = await supabase.from('songs').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  if (delSongs) console.warn('  songs:', delSongs.message)
+
+  const { error: delTeams } = await supabase.from('teams').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  if (delTeams) console.warn('  teams:', delTeams.message)
+
+  console.log('✅ Tables cleared\n')
+
   console.log('Seeding teams...')
-  const { data: teams, error: teamErr } = await supabase
-    .from('teams')
-    .insert(DEFAULT_TEAMS)
-    .select()
+  const { data: teams, error: teamErr } = await supabase.from('teams').insert(DEFAULT_TEAMS).select()
   if (teamErr) { console.error(teamErr); process.exit(1) }
   console.log(`✅ ${teams?.length} teams inserted`)
 
   console.log('Seeding songs...')
-  const { data: songs, error: songErr } = await supabase
-    .from('songs')
-    .insert(DEFAULT_SONGS)
-    .select()
+  const { data: songs, error: songErr } = await supabase.from('songs').insert(DEFAULT_SONGS).select()
   if (songErr) { console.error(songErr); process.exit(1) }
-  console.log(`✅ ${songs?.length} songs inserted`)
+  const tamil = songs?.filter((s: any) => s.language === 'tamil').length ?? 0
+  const hindi = songs?.filter((s: any) => s.language === 'hindi').length ?? 0
+  console.log(`✅ ${songs?.length} songs inserted (${tamil} Tamil, ${hindi} Hindi)`)
 
   console.log('Creating event_state...')
   const { error: stateErr } = await supabase.from('event_state').insert({
@@ -39,7 +54,7 @@ async function seed() {
   if (stateErr) { console.error(stateErr); process.exit(1) }
   console.log('✅ event_state created')
 
-  console.log('\n🎉 Seed complete! Your event is ready.')
+  console.log('\n🎉 Reseed complete! Your event is ready.')
 }
 
 seed()

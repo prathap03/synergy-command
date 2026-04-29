@@ -6,6 +6,8 @@ export interface Team {
   created_at: string
 }
 
+export type SongLanguage = 'tamil' | 'hindi'
+
 export interface Song {
   id: string
   clue: string
@@ -13,6 +15,7 @@ export interface Song {
   movie: string
   director_singer: string
   level: 1 | 2 | 3
+  language: SongLanguage
   used: boolean
   created_at: string
 }
@@ -72,13 +75,25 @@ export const PHASE_TIMERS: Record<string, number> = {
   phase3: 5 * 60,
 }
 
-export const SPINNER_MESSAGES = [
-  'Asking Rajinikanth...',
-  'Consulting AR Rahman...',
-  'Rewinding the cassette...',
-  'Bribing the music director...',
-  'Calling Ilayaraja...',
-  'Searching Vijay TV archives...',
-  'Loading Tamil magic...',
-  'Summoning Kalaignar...',
-]
+export const SPINNER_MESSAGES: Record<SongLanguage, string[]> = {
+  tamil: [
+    'Asking Rajinikanth...',
+    'Consulting AR Rahman...',
+    'Rewinding the cassette...',
+    'Bribing the music director...',
+    'Calling Ilayaraja...',
+    'Searching Vijay TV archives...',
+    'Loading Tamil magic...',
+    'Summoning Kalaignar...',
+  ],
+  hindi: [
+    'Asking Bollywood...',
+    'Consulting Arijit Singh...',
+    'Rewinding the VHS tape...',
+    'Calling Shah Rukh Khan...',
+    'Searching Filmfare archives...',
+    'Loading Bollywood magic...',
+    'Summoning Yash Raj Films...',
+    'Consulting the Khans...',
+  ],
+}
