@@ -26,9 +26,14 @@ export default function SongRevealCard({ song, onMarkUsed, onDismiss }: Props) {
           🎯 Active participant — translate this song!
         </p>
         <p className="text-4xl font-black text-white leading-tight">{song.answer}</p>
-        {song.movie && (
-          <p className="text-white/50 text-sm mt-3">🎬 from <span className="text-white/70">{song.movie}</span></p>
-        )}
+        <div className="flex flex-col items-center gap-1 mt-3">
+          {song.movie && (
+            <p className="text-white/55 text-sm">🎬 <span className="text-white/75">{song.movie}</span></p>
+          )}
+          {song.director_singer && (
+            <p className="text-white/55 text-sm">🎤 <span className="text-white/75">{song.director_singer}</span></p>
+          )}
+        </div>
       </div>
 
       {/* Hint toggle — English clue for participant reference */}
